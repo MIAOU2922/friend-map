@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Friend Map - Carte Interactive</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="header">
+                <h1>🗺️ Friend Map</h1>
+                <p>Gérez vos points sur la carte</p>
+            </div>
+
+            <!-- Formulaire d'ajout/modification -->
+            <div class="form-container">
+                <h2 id="form-title">Ajouter un point</h2>
+                <form id="point-form">
+                    <input type="hidden" id="point-id">
+                    
+                    <div class="form-group">
+                        <label for="name">Nom *</label>
+                        <input type="text" id="name" required placeholder="Nom du point">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="color">Couleur *</label>
+                        <input type="color" id="color" value="#FF5733" required>
+                    </div>
+
+                    <div class="form-group">
+
+                        <label for="address">Adresse 🔍</label>
+                        <input type="text" id="address" placeholder="Tapez une adresse et sélectionnez dans la liste">
+                        <small style="display: block; margin-top: 5px; color: #666; font-size: 11px;">
+                            💡 Appuyez sur Entrée pour zoomer sur l'adresse
+                        </small>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="latitude">Latitude *</label>
+                            <input type="number" id="latitude" step="any" required placeholder="48.8584">
+                        </div>
+                        <div class="form-group">
+                            <label for="longitude">Longitude *</label>
+                            <input type="number" id="longitude" step="any" required placeholder="2.2945">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description">Description</label>
+                        <textarea id="description" rows="3" placeholder="Ajoutez une description..."></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" id="submit-btn">
+                            ➕ Ajouter
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="cancel-btn" style="display: none;">
+                            ❌ Annuler
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Liste des points -->
+            <div class="points-list">
+                <h2>Points enregistrés</h2>
+                
+                <!-- Recherche et tri -->
+                <div class="search-sort-container">
+                    <div class="search-box">
+                        <input type="text" id="search-input" placeholder="🔍 Rechercher un point...">
+                    </div>
+                    <div class="sort-box">
+                        <label for="sort-select">Trier par:</label>
+                        <select id="sort-select">
+                            <option value="date-desc">Date (plus récent)</option>
+                            <option value="date-asc">Date (plus ancien)</option>
+                            <option value="name-asc">Nom (A-Z)</option>
+                            <option value="name-desc">Nom (Z-A)</option>
+                            <option value="color">Couleur</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div id="points-container">
+                    <p class="loading">Chargement...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Carte -->
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="app.js"></script>
+</body>
+</html>
