@@ -12,6 +12,16 @@ let autocomplete;
 let searchText = '';
 let sortBy = 'date-desc';
 
+// Générer une couleur aléatoire
+function getRandomColor() {
+    const letters = '0123456789ABCDEF';
+    let color = '#';
+    for (let i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 16)];
+    }
+    return color;
+}
+
 // Charger la configuration et initialiser Google Maps
 async function loadConfigAndInitMap() {
     try {
@@ -488,8 +498,8 @@ function resetForm() {
     document.getElementById('cancel-btn').style.display = 'none';
     document.getElementById('point-id').value = '';
     
-    // Réinitialiser la couleur par défaut
-    document.getElementById('color').value = '#FF5733';
+    // Générer une couleur aléatoire
+    document.getElementById('color').value = getRandomColor();
 }
 
 // Bouton annuler
@@ -511,3 +521,6 @@ document.getElementById('sort-select').addEventListener('change', (e) => {
 
 // Démarrer l'application en chargeant la config et initialisant la carte
 loadConfigAndInitMap();
+
+// Initialiser une couleur aléatoire au chargement
+document.getElementById('color').value = getRandomColor();
