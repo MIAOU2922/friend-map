@@ -11,6 +11,7 @@ let googleMapsApiKey = '';
 let autocomplete;
 let searchText = '';
 let sortBy = 'date-desc';
+let currentOpenInfoWindow = null; // Référence au tooltip actuellement ouvert
 
 // Générer une couleur aléatoire
 function getRandomColor() {
@@ -79,6 +80,12 @@ function initMap() {
         
         document.getElementById('latitude').value = lat.toFixed(6);
         document.getElementById('longitude').value = lng.toFixed(6);
+        
+        // Fermer le tooltip ouvert quand on clique sur la carte
+        if (currentOpenInfoWindow) {
+            currentOpenInfoWindow.close();
+            currentOpenInfoWindow = null;
+        }
         
         // Obtenir l'adresse via Geocoding (optionnel)
         getAddressFromCoords(lat, lng);
@@ -327,7 +334,14 @@ function displayMarkersOnMap() {
         });
         
         marker.addListener('click', () => {
+            // Fermer le tooltip précédent s'il existe
+            if (currentOpenInfoWindow) {
+                currentOpenInfoWindow.close();
+            }
+            // Ouvrir le nouveau tooltip
             infoWindow.open(map, marker);
+            // Stocker la référence au tooltip ouvert
+            currentOpenInfoWindow = infoWindow;
         });
         
         markers.push(marker);
@@ -348,7 +362,7 @@ function displayMarkersOnMap() {
                     // Style personnalisé pour les clusters
                     const color = count > 10 ? "#764ba2" : count > 5 ? "#667eea" : "#8b9aee";
                     
-                    return new google.maps.Marker({
+                    const clusterMarker = new google.maps.Marker({
                         position,
                         icon: {
                             path: google.maps.SymbolPath.CIRCLE,
@@ -367,6 +381,16 @@ function displayMarkersOnMap() {
                         title: `Cluster de ${count} points`,
                         zIndex: Number(google.maps.Marker.MAX_ZINDEX) + count,
                     });
+                    
+                    // Fermer le tooltip ouvert quand on clique sur un cluster
+                    clusterMarker.addListener('click', () => {
+                        if (currentOpenInfoWindow) {
+                            currentOpenInfoWindow.close();
+                            currentOpenInfoWindow = null;
+                        }
+                    });
+                    
+                    return clusterMarker;
                 },
             },
         });
