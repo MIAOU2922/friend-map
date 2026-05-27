@@ -23,6 +23,30 @@ function getRandomColor() {
     return color;
 }
 
+// Animer la carte vers une position avec zoom fluide
+function animateMapToLocation(lat, lng, targetZoom) {
+    // Centrer la carte avec animation (panTo est déjà animé par Google Maps)
+    map.panTo({ lat, lng });
+    
+    // Animer le zoom progressivement
+    const currentZoom = map.getZoom();
+    const zoomStep = targetZoom > currentZoom ? 1 : -1;
+    const totalSteps = Math.abs(targetZoom - currentZoom);
+    
+    if (totalSteps === 0) return;
+    
+    let step = 0;
+    const zoomInterval = setInterval(() => {
+        step++;
+        const newZoom = currentZoom + (zoomStep * step);
+        map.setZoom(newZoom);
+        
+        if (step >= totalSteps) {
+            clearInterval(zoomInterval);
+        }
+    }, 100); // 100ms entre chaque niveau de zoom pour une animation fluide
+}
+
 // Charger la configuration et initialiser Google Maps
 async function loadConfigAndInitMap() {
     try {
@@ -321,27 +345,99 @@ function displayMarkersOnMap() {
             },
         });
         
-        // InfoWindow pour chaque marqueur - style sombre
-        const infoWindow = new google.maps.InfoWindow({
+        // Stocker l'ID du point sur le marqueur pour le retrouver facilement
+        marker.pointId = point.id;
+        
+        // InfoWindow simple pour le survol - juste le nom avec la couleur
+        const hoverInfoWindow = new google.maps.InfoWindow({
             content: `
-                <div style="padding: 10px; min-width: 200px; background: #1a1a1a; color: #e0e0e0;">
-                    <h3 style="margin: 0 0 10px 0; color: ${point.color};">${point.name}</h3>
-                    <p style="margin: 5px 0;"><strong>Date:</strong> ${formatDate(point.date)}</p>
-                    ${point.address ? `<p style="margin: 5px 0;"><strong>Adresse:</strong> ${point.address}</p>` : ''}
-                    ${point.description ? `<p style="margin: 5px 0;"><strong>Description:</strong> ${point.description}</p>` : ''}
+                <div style="padding: 8px; background: #1a1a1a; color: #e0e0e0;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 12px; height: 12px; border-radius: 50%; background-color: ${point.color};"></div>
+                        <span style="font-weight: 500;">${point.name}</span>
+                    </div>
                 </div>
             `,
         });
         
+        // InfoWindow détaillée pour le clic - avec tous les détails
+        const detailsInfoWindow = new google.maps.InfoWindow({
+            content: `
+                <div style="padding: 12px; min-width: 250px; max-width: 350px; background: #1a1a1a; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #333;">
+                        <div style="width: 16px; height: 16px; border-radius: 50%; background-color: ${point.color}; flex-shrink: 0;"></div>
+                        <h3 style="margin: 0; font-size: 18px; font-weight: 600;">${point.name}</h3>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 8px; font-size: 14px;">
+                        <div style="display: flex; align-items: flex-start; gap: 8px;">
+                            <span style="flex-shrink: 0;">📅</span>
+                            <span style="color: #b0b0b0;">${formatDate(point.date)}</span>
+                        </div>
+                        ${point.address ? `
+                        <div style="display: flex; align-items: flex-start; gap: 8px;">
+                            <span style="flex-shrink: 0;">📍</span>
+                            <span style="color: #b0b0b0;">${point.address}</span>
+                        </div>
+                        ` : ''}
+                        <div style="display: flex; align-items: flex-start; gap: 8px;">
+                            <span style="flex-shrink: 0;">🌐</span>
+                            <span style="color: #b0b0b0; font-family: monospace; font-size: 12px;">${point.latitude.toFixed(6)}, ${point.longitude.toFixed(6)}</span>
+                        </div>
+                        ${point.description ? `
+                        <div style="display: flex; align-items: flex-start; gap: 8px; padding-top: 8px; border-top: 1px solid #333;">
+                            <span style="flex-shrink: 0;">💬</span>
+                            <span style="color: #e0e0e0;">${point.description}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                    <div style="display: flex; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #333;">
+                        <button onclick="editPoint('${point.id}')" style="flex: 1; padding: 8px 12px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; transition: background 0.2s;" onmouseover="this.style.background='#5568d3'" onmouseout="this.style.background='#667eea'">
+                            ✏️ Modifier
+                        </button>
+                        <button onclick="deletePoint('${point.id}')" style="flex: 1; padding: 8px 12px; background: #f44336; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; transition: background 0.2s;" onmouseover="this.style.background='#d32f2f'" onmouseout="this.style.background='#f44336'">
+                            🗑️ Supprimer
+                        </button>
+                    </div>
+                </div>
+            `,
+        });
+        
+        // Afficher l'InfoWindow au survol
+        marker.addListener('mouseover', () => {
+            // Ne pas afficher le hover si le details est déjà ouvert pour ce marqueur
+            if (currentOpenInfoWindow !== detailsInfoWindow) {
+                hoverInfoWindow.open(map, marker);
+            }
+        });
+        
+        // Cacher l'InfoWindow quand on ne survole plus
+        marker.addListener('mouseout', () => {
+            hoverInfoWindow.close();
+        });
+        
+        // Au clic, afficher les détails complets et zoomer
         marker.addListener('click', () => {
-            // Fermer le tooltip précédent s'il existe
+            // Fermer l'InfoWindow de survol
+            hoverInfoWindow.close();
+            
+            // Fermer l'InfoWindow de détails ouverte précédemment
             if (currentOpenInfoWindow) {
                 currentOpenInfoWindow.close();
             }
-            // Ouvrir le nouveau tooltip
-            infoWindow.open(map, marker);
-            // Stocker la référence au tooltip ouvert
-            currentOpenInfoWindow = infoWindow;
+            
+            // Zoomer sur le point avec animation
+            const currentZoom = map.getZoom();
+            if (currentZoom < 15) {
+                animateMapToLocation(point.latitude, point.longitude, 15);
+            } else {
+                map.panTo({ lat: point.latitude, lng: point.longitude });
+            }
+            
+            // Ouvrir la nouvelle InfoWindow de détails après un court délai pour laisser le temps au zoom
+            setTimeout(() => {
+                detailsInfoWindow.open(map, marker);
+                currentOpenInfoWindow = detailsInfoWindow;
+            }, 200);
         });
         
         markers.push(marker);
@@ -358,7 +454,7 @@ function displayMarkersOnMap() {
                 maxZoom: 15
             }),
             renderer: {
-                render: ({ count, position }) => {
+                render: ({ count, position, markers: clusterMarkers }) => {
                     // Style personnalisé pour les clusters
                     const color = count > 10 ? "#764ba2" : count > 5 ? "#667eea" : "#8b9aee";
                     
@@ -382,12 +478,51 @@ function displayMarkersOnMap() {
                         zIndex: Number(google.maps.Marker.MAX_ZINDEX) + count,
                     });
                     
-                    // Fermer le tooltip ouvert quand on clique sur un cluster
+                    // Créer l'InfoWindow pour afficher les noms des points du cluster
+                    const pointNames = clusterMarkers.map(marker => {
+                        // Récupérer le point correspondant au marker
+                        const markerIndex = markers.indexOf(marker);
+                        if (markerIndex !== -1 && markerIndex < filteredPoints.length) {
+                            const point = filteredPoints[markerIndex];
+                            return `
+                                <div style="display: flex; align-items: center; gap: 8px; margin: 4px 0;">
+                                    <div style="width: 12px; height: 12px; border-radius: 50%; background-color: ${point.color}; flex-shrink: 0;"></div>
+                                    <span style="font-weight: 500;">${point.name}</span>
+                                </div>
+                            `;
+                        }
+                        return marker.getTitle();
+                    }).join('');
+                    
+                    const clusterInfoWindow = new google.maps.InfoWindow({
+                        content: `
+                            <div style="padding: 8px; max-width: 250px; max-height: 300px; overflow-y: auto; background: #1a1a1a; color: #e0e0e0;">
+                                ${pointNames}
+                            </div>
+                        `,
+                    });
+                    
+                    // Afficher l'InfoWindow au survol
+                    clusterMarker.addListener('mouseover', () => {
+                        clusterInfoWindow.open(map, clusterMarker);
+                    });
+                    
+                    // Cacher l'InfoWindow quand on ne survole plus
+                    clusterMarker.addListener('mouseout', () => {
+                        clusterInfoWindow.close();
+                    });
+                    
+                    // Fermer le tooltip ouvert et zoomer avec animation quand on clique sur un cluster
                     clusterMarker.addListener('click', () => {
                         if (currentOpenInfoWindow) {
                             currentOpenInfoWindow.close();
                             currentOpenInfoWindow = null;
                         }
+                        
+                        // Zoomer sur le cluster avec animation
+                        const currentZoom = map.getZoom();
+                        const targetZoom = Math.min(currentZoom + 3, 18); // Zoomer de 3 niveaux, maximum 18
+                        animateMapToLocation(position.lat(), position.lng(), targetZoom);
                     });
                     
                     return clusterMarker;
@@ -400,16 +535,21 @@ function displayMarkersOnMap() {
     }
 }
 
-// Centrer la carte sur un point
+// Centrer la carte sur un point avec animation
 function centerMapOnPoint(pointId) {
     const point = points.find(p => p.id === pointId);
     if (point) {
-        map.setCenter({ lat: point.latitude, lng: point.longitude });
-        map.setZoom(15);
+        // Animer le déplacement et le zoom
+        animateMapToLocation(point.latitude, point.longitude, 15);
         
-        // Ouvrir l'infowindow du marqueur
-        const marker = markers[points.indexOf(point)];
-        google.maps.event.trigger(marker, 'click');
+        // Trouver le marqueur correspondant au point
+        const marker = markers.find(m => m.pointId === pointId);
+        if (marker) {
+            // Déclencher le clic sur le marqueur pour afficher les détails après l'animation
+            setTimeout(() => {
+                google.maps.event.trigger(marker, 'click');
+            }, 500);
+        }
     }
 }
 

@@ -19,14 +19,14 @@ app.use(express.static(path.join(__dirname, '../public')));
 app.use('/api/points', pointRoutes);
 
 // Route pour obtenir la configuration (clé API)
-app.get('/api/config', (req, res) => {
+app.get('/api/config', (_req, res) => {
   res.json({
     googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || ''
   });
 });
 
 // Route principale - servir l'interface
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 

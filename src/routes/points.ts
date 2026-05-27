@@ -4,7 +4,7 @@ import prisma from '../lib/prisma';
 const router = Router();
 
 // GET tous les points
-router.get('/', async (req, res) => {
+router.get('/', async (_req, res) => {
   try {
     const points = await prisma.mapPoint.findMany({
       orderBy: {
@@ -28,10 +28,10 @@ router.get('/:id', async (req, res) => {
     if (!point) {
       return res.status(404).json({ error: 'Point non trouvé' });
     }
-    res.json(point);
+    return res.json(point);
   } catch (error) {
     console.error('Erreur:', error);
-    res.status(500).json({ error: 'Erreur lors de la récupération du point' });
+    return res.status(500).json({ error: 'Erreur lors de la récupération du point' });
   }
 });
 
